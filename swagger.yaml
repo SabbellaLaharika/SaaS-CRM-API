@@ -6,9 +6,24 @@ info:
 servers:
   - url: http://localhost:8080/api
     description: API Server
+tags:
+  - name: Authentication
+    description: User registration, login, and profile operations
+  - name: Organization Management
+    description: Member invitations and tenant configurations
+  - name: Contacts
+    description: Tenant-scoped Contact management
+  - name: Deals
+    description: Tenant-scoped Sales Deals management
+  - name: Tasks
+    description: Tenant-scoped Tasks and Agenda management
+  - name: Dashboard
+    description: Tenant-scoped CRM performance metrics
 paths:
   /auth/register:
     post:
+      tags:
+        - Authentication
       summary: Register Organization and Owner User
       description: Creates an Organization, creates a User associated with that Organization, assigns the User the owner role, and returns a JWT.
       requestBody:
@@ -72,6 +87,8 @@ paths:
 
   /auth/login:
     post:
+      tags:
+        - Authentication
       summary: Login and Authenticate
       description: Validates user credentials and returns a JWT containing tenant context (userId, organizationId, role).
       requestBody:
@@ -110,6 +127,8 @@ paths:
 
   /auth/me:
     get:
+      tags:
+        - Authentication
       summary: Get Profile of Authenticated User
       description: Returns the user's ID, email, role, and the associated organization's ID and name.
       security:
@@ -132,6 +151,20 @@ paths:
                   role:
                     type: string
                     example: owner
+                  organization_id:
+                    type: string
+                    format: uuid
+                    example: b2c35f29-d5a2-4a0b-8d05-e3251e604f81
+                  organization_name:
+                    type: string
+                    example: Acme Corp
+                  organizationId:
+                    type: string
+                    format: uuid
+                    example: b2c35f29-d5a2-4a0b-8d05-e3251e604f81
+                  organizationName:
+                    type: string
+                    example: Acme Corp
                   organization:
                     type: object
                     properties:
@@ -147,6 +180,8 @@ paths:
 
   /organizations/invites:
     post:
+      tags:
+        - Organization Management
       summary: Invite User to Organization
       description: Allows Owners and Admins to invite new users to their organization. Creates a user record with a stubbed password.
       security:
@@ -206,6 +241,8 @@ paths:
 
   /contacts:
     get:
+      tags:
+        - Contacts
       summary: List Contacts
       description: Retrieves all contacts strictly scoped to the authenticated user's organization.
       security:
@@ -222,8 +259,10 @@ paths:
         '401':
           description: Unauthorized
     post:
+      tags:
+        - Contacts
       summary: Create Contact
-      description: Creates a new contact for the authenticated user's organization. Allowed roles: owner, admin, member.
+      description: "Creates a new contact for the authenticated user's organization. Allowed roles: owner, admin, member."
       security:
         - BearerAuth: []
       requestBody:
@@ -267,6 +306,8 @@ paths:
           format: uuid
         description: UUID of the contact
     get:
+      tags:
+        - Contacts
       summary: Read Contact
       description: Returns a single contact by ID, scoped to the tenant.
       security:
@@ -283,6 +324,8 @@ paths:
         '404':
           description: Contact not found in this organization
     put:
+      tags:
+        - Contacts
       summary: Update Contact
       description: Updates contact details. Scoped to the tenant. Members can only update contacts they created.
       security:
@@ -318,6 +361,8 @@ paths:
         '404':
           description: Contact not found in this organization
     delete:
+      tags:
+        - Contacts
       summary: Delete Contact
       description: Deletes a contact by ID. Scoped to the tenant. Members can only delete contacts they created.
       security:
@@ -338,6 +383,8 @@ paths:
 
   /deals:
     get:
+      tags:
+        - Deals
       summary: List Deals
       description: Retrieves all deals strictly scoped to the tenant.
       security:
@@ -354,8 +401,10 @@ paths:
         '401':
           description: Unauthorized
     post:
+      tags:
+        - Deals
       summary: Create Deal
-      description: Creates a new deal. Validates contact_id belongs to the tenant. Allowed stages: lead, qualified, won, lost.
+      description: "Creates a new deal. Validates contact_id belongs to the tenant. Allowed stages: lead, qualified, won, lost."
       security:
         - BearerAuth: []
       requestBody:
@@ -408,6 +457,8 @@ paths:
           format: uuid
         description: UUID of the deal
     get:
+      tags:
+        - Deals
       summary: Read Deal
       description: Returns a single deal. Scoped to the tenant.
       security:
@@ -424,6 +475,8 @@ paths:
         '404':
           description: Deal not found in this organization
     put:
+      tags:
+        - Deals
       summary: Update Deal
       description: Updates deal details. Scoped to tenant. Members can only update deals they created.
       security:
@@ -465,6 +518,8 @@ paths:
         '404':
           description: Deal not found in this organization
     delete:
+      tags:
+        - Deals
       summary: Delete Deal
       description: Deletes a deal. Scoped to tenant. Members can only delete deals they created.
       security:
@@ -485,6 +540,8 @@ paths:
 
   /tasks:
     get:
+      tags:
+        - Tasks
       summary: List Tasks
       description: Retrieves all tasks scoped to the tenant.
       security:
@@ -501,8 +558,10 @@ paths:
         '401':
           description: Unauthorized
     post:
+      tags:
+        - Tasks
       summary: Create Task
-      description: Creates a new task. Validates contact_id/deal_id belong to the tenant. Allowed statuses: pending, completed.
+      description: "Creates a new task. Validates contact_id/deal_id belong to the tenant. Allowed statuses: pending, completed."
       security:
         - BearerAuth: []
       requestBody:
@@ -559,6 +618,8 @@ paths:
           format: uuid
         description: UUID of the task
     get:
+      tags:
+        - Tasks
       summary: Read Task
       description: Returns a single task. Scoped to the tenant.
       security:
@@ -575,6 +636,8 @@ paths:
         '404':
           description: Task not found in this organization
     put:
+      tags:
+        - Tasks
       summary: Update Task
       description: Updates task details. Scoped to tenant. Members can only update tasks they created.
       security:
@@ -621,6 +684,8 @@ paths:
         '404':
           description: Task not found in this organization
     delete:
+      tags:
+        - Tasks
       summary: Delete Task
       description: Deletes a task. Scoped to tenant. Members can only delete tasks they created.
       security:
@@ -641,6 +706,8 @@ paths:
 
   /dashboard:
     get:
+      tags:
+        - Dashboard
       summary: Get Dashboard Metrics
       description: Returns aggregate CRM statistics scoped strictly to the authenticated tenant.
       security:

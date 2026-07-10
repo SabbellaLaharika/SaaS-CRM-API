@@ -119,6 +119,10 @@ class AuthService {
       id: profile.id,
       email: profile.email,
       role: profile.role,
+      organization_id: profile.organization_id,
+      organization_name: profile.organization_name,
+      organizationId: profile.organization_id,
+      organizationName: profile.organization_name,
       organization: {
         id: profile.organization_id,
         name: profile.organization_name,

@@ -157,4 +157,7 @@ npm run dev
 ---
 
 ## API Specification
-The complete API specification is available in the [swagger.yaml](swagger.yaml) file at the root of the project. You can import this file into Swagger Editor or Postman for full details on request schemas, parameters, and responses.
+
+The complete API specification is available in two ways:
+1. **Interactive Swagger UI**: When the application container is running, navigate to [http://localhost:8080/api-docs](http://localhost:8080/api-docs) in your browser. This UI allows you to directly explore and test all API endpoints.
+2. **Static Spec File**: Open the [swagger.yaml](swagger.yaml) file at the root of the project.

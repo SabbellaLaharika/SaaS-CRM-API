@@ -2,12 +2,8 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 function requireAuthentication(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ error: "Authentication required" });
-  }
+  const token = req.headers.authorization?.split(' ')[1];
 
-  const token = authHeader.split(' ')[1];
   if (!token) {
     return res.status(401).json({ error: "Authentication required" });
   }
@@ -22,7 +18,6 @@ function requireAuthentication(req, res, next) {
       role: decoded.role
     };
 
-    // Also attach to req.tenant for compatibility
     req.tenant = {
       organizationId: decoded.organizationId,
       role: decoded.role
