@@ -1,0 +1,790 @@
+openapi: 3.0.3
+info:
+  title: Multi-Tenant SaaS CRM REST API
+  description: A secure, multi-tenant CRM API with Role-Based Access Control (RBAC). Built with Node.js, Express, and PostgreSQL.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api
+    description: API Server
+paths:
+  /auth/register:
+    post:
+      summary: Register Organization and Owner User
+      description: Creates an Organization, creates a User associated with that Organization, assigns the User the owner role, and returns a JWT.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - organization_name
+                - user_name
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  format: password
+                  example: secure_password
+                organization_name:
+                  type: string
+                  example: Acme Corp
+                user_name:
+                  type: string
+                  example: Jane Doe
+      responses:
+        '201':
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        example: c3b3b4f6-8c44-4861-a83a-d34e9e04812a
+                      email:
+                        type: string
+                        example: user@example.com
+                      role:
+                        type: string
+                        example: owner
+                      organizationId:
+                        type: string
+                        format: uuid
+                        example: b2c35f29-d5a2-4a0b-8d05-e3251e604f81
+        '400':
+          description: Missing or invalid request parameters
+        '409':
+          description: User with this email already exists
+
+  /auth/login:
+    post:
+      summary: Login and Authenticate
+      description: Validates user credentials and returns a JWT containing tenant context (userId, organizationId, role).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  format: password
+                  example: secure_password
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '400':
+          description: Missing email or password
+        '401':
+          description: Invalid email or password
+
+  /auth/me:
+    get:
+      summary: Get Profile of Authenticated User
+      description: Returns the user's ID, email, role, and the associated organization's ID and name.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    example: c3b3b4f6-8c44-4861-a83a-d34e9e04812a
+                  email:
+                    type: string
+                    example: user@example.com
+                  role:
+                    type: string
+                    example: owner
+                  organization:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        example: b2c35f29-d5a2-4a0b-8d05-e3251e604f81
+                      name:
+                        type: string
+                        example: Acme Corp
+        '401':
+          description: Unauthorized (missing or invalid token)
+
+  /organizations/invites:
+    post:
+      summary: Invite User to Organization
+      description: Allows Owners and Admins to invite new users to their organization. Creates a user record with a stubbed password.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - role
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: newuser@example.com
+                role:
+                  type: string
+                  enum: [admin, member, viewer]
+                  example: member
+      responses:
+        '201':
+          description: Invited successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    example: d7a14e9f-7a42-4fdb-b1b0-2b1f8e2df8d1
+                  email:
+                    type: string
+                    example: newuser@example.com
+                  role:
+                    type: string
+                    example: member
+                  organization_id:
+                    type: string
+                    format: uuid
+                    example: b2c35f29-d5a2-4a0b-8d05-e3251e604f81
+                  created_at:
+                    type: string
+                    format: date-time
+                    example: "2026-07-10T12:30:00.000Z"
+        '400':
+          description: Invalid request parameters or role
+        '401':
+          description: Unauthorized (missing or invalid token)
+        '403':
+          description: Forbidden (insufficient permissions - Viewer/Member)
+        '409':
+          description: Email already in use
+
+  /contacts:
+    get:
+      summary: List Contacts
+      description: Retrieves all contacts strictly scoped to the authenticated user's organization.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Contact'
+        '401':
+          description: Unauthorized
+    post:
+      summary: Create Contact
+      description: Creates a new contact for the authenticated user's organization. Allowed roles: owner, admin, member.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  example: John Smith
+                email:
+                  type: string
+                  format: email
+                  example: john.smith@example.com
+                phone:
+                  type: string
+                  example: "+1-555-0199"
+      responses:
+        '201':
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contact'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (Viewer role trying to mutate)
+
+  /contacts/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: UUID of the contact
+    get:
+      summary: Read Contact
+      description: Returns a single contact by ID, scoped to the tenant.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contact'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Contact not found in this organization
+    put:
+      summary: Update Contact
+      description: Updates contact details. Scoped to the tenant. Members can only update contacts they created.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: John Smith Jr.
+                email:
+                  type: string
+                  format: email
+                  example: john.smith.jr@example.com
+                phone:
+                  type: string
+                  example: "+1-555-0100"
+      responses:
+        '200':
+          description: Updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contact'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (Viewer role, or Member updating another's contact)
+        '404':
+          description: Contact not found in this organization
+    delete:
+      summary: Delete Contact
+      description: Deletes a contact by ID. Scoped to the tenant. Members can only delete contacts they created.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contact'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (Viewer role, or Member deleting another's contact)
+        '404':
+          description: Contact not found in this organization
+
+  /deals:
+    get:
+      summary: List Deals
+      description: Retrieves all deals strictly scoped to the tenant.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Deal'
+        '401':
+          description: Unauthorized
+    post:
+      summary: Create Deal
+      description: Creates a new deal. Validates contact_id belongs to the tenant. Allowed stages: lead, qualified, won, lost.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - value
+                - stage
+                - contact_id
+              properties:
+                title:
+                  type: string
+                  example: Enterprise License Deal
+                value:
+                  type: number
+                  example: 45000.00
+                stage:
+                  type: string
+                  enum: [lead, qualified, won, lost]
+                  example: lead
+                contact_id:
+                  type: string
+                  format: uuid
+                  example: c3b3b4f6-8c44-4861-a83a-d34e9e04812a
+      responses:
+        '201':
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+        '400':
+          description: Invalid contact_id (not in tenant) or stage
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (Viewer role)
+
+  /deals/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: UUID of the deal
+    get:
+      summary: Read Deal
+      description: Returns a single deal. Scoped to the tenant.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Deal not found in this organization
+    put:
+      summary: Update Deal
+      description: Updates deal details. Scoped to tenant. Members can only update deals they created.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: Enterprise Renewal
+                value:
+                  type: number
+                  example: 50000.00
+                stage:
+                  type: string
+                  enum: [lead, qualified, won, lost]
+                  example: qualified
+                contact_id:
+                  type: string
+                  format: uuid
+                  example: c3b3b4f6-8c44-4861-a83a-d34e9e04812a
+      responses:
+        '200':
+          description: Updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+        '400':
+          description: Invalid contact_id (not in tenant) or stage
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (Viewer role, or Member updating another's deal)
+        '404':
+          description: Deal not found in this organization
+    delete:
+      summary: Delete Deal
+      description: Deletes a deal. Scoped to tenant. Members can only delete deals they created.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (Viewer role, or Member deleting another's deal)
+        '404':
+          description: Deal not found in this organization
+
+  /tasks:
+    get:
+      summary: List Tasks
+      description: Retrieves all tasks scoped to the tenant.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+        '401':
+          description: Unauthorized
+    post:
+      summary: Create Task
+      description: Creates a new task. Validates contact_id/deal_id belong to the tenant. Allowed statuses: pending, completed.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - status
+                - due_date
+              properties:
+                title:
+                  type: string
+                  example: Send follow-up email
+                status:
+                  type: string
+                  enum: [pending, completed]
+                  example: pending
+                due_date:
+                  type: string
+                  format: date-time
+                  example: "2026-07-15T10:00:00.000Z"
+                contact_id:
+                  type: string
+                  format: uuid
+                  example: c3b3b4f6-8c44-4861-a83a-d34e9e04812a
+                deal_id:
+                  type: string
+                  format: uuid
+                  example: d8a24e9f-7a42-4fdb-b1b0-2b1f8e2df8d1
+      responses:
+        '201':
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Invalid contact_id/deal_id (not in tenant) or status
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (Viewer role)
+
+  /tasks/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: UUID of the task
+    get:
+      summary: Read Task
+      description: Returns a single task. Scoped to the tenant.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Task not found in this organization
+    put:
+      summary: Update Task
+      description: Updates task details. Scoped to tenant. Members can only update tasks they created.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: Book meeting room
+                status:
+                  type: string
+                  enum: [pending, completed]
+                  example: completed
+                due_date:
+                  type: string
+                  format: date-time
+                  example: "2026-07-15T12:00:00.000Z"
+                contact_id:
+                  type: string
+                  format: uuid
+                  example: c3b3b4f6-8c44-4861-a83a-d34e9e04812a
+                deal_id:
+                  type: string
+                  format: uuid
+                  example: d8a24e9f-7a42-4fdb-b1b0-2b1f8e2df8d1
+      responses:
+        '200':
+          description: Updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Invalid contact_id/deal_id (not in tenant) or status
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (Viewer role, or Member updating another's task)
+        '404':
+          description: Task not found in this organization
+    delete:
+      summary: Delete Task
+      description: Deletes a task. Scoped to tenant. Members can only delete tasks they created.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (Viewer role, or Member deleting another's task)
+        '404':
+          description: Task not found in this organization
+
+  /dashboard:
+    get:
+      summary: Get Dashboard Metrics
+      description: Returns aggregate CRM statistics scoped strictly to the authenticated tenant.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_contacts:
+                    type: integer
+                    example: 150
+                  total_deals_value:
+                    type: number
+                    format: float
+                    example: 450000.00
+                  deals_by_stage:
+                    type: object
+                    properties:
+                      lead:
+                        type: integer
+                        example: 10
+                      qualified:
+                        type: integer
+                        example: 5
+                      won:
+                        type: integer
+                        example: 20
+                      lost:
+                        type: integer
+                        example: 2
+                  pending_tasks:
+                    type: integer
+                    example: 12
+        '401':
+          description: Unauthorized
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Contact:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: c3b3b4f6-8c44-4861-a83a-d34e9e04812a
+        organization_id:
+          type: string
+          format: uuid
+          example: b2c35f29-d5a2-4a0b-8d05-e3251e604f81
+        name:
+          type: string
+          example: John Smith
+        email:
+          type: string
+          format: email
+          example: john.smith@example.com
+        phone:
+          type: string
+          example: "+1-555-0199"
+        created_by:
+          type: string
+          format: uuid
+          example: d7a14e9f-7a42-4fdb-b1b0-2b1f8e2df8d1
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-07-10T12:00:00.000Z"
+    Deal:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d8a24e9f-7a42-4fdb-b1b0-2b1f8e2df8d1
+        organization_id:
+          type: string
+          format: uuid
+          example: b2c35f29-d5a2-4a0b-8d05-e3251e604f81
+        title:
+          type: string
+          example: Enterprise License Deal
+        value:
+          type: number
+          example: 45000.00
+        stage:
+          type: string
+          example: lead
+        contact_id:
+          type: string
+          format: uuid
+          example: c3b3b4f6-8c44-4861-a83a-d34e9e04812a
+        created_by:
+          type: string
+          format: uuid
+          example: d7a14e9f-7a42-4fdb-b1b0-2b1f8e2df8d1
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-07-10T12:00:00.000Z"
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: e9b54e9f-7a42-4fdb-b1b0-2b1f8e2df8d1
+        organization_id:
+          type: string
+          format: uuid
+          example: b2c35f29-d5a2-4a0b-8d05-e3251e604f81
+        title:
+          type: string
+          example: Send follow-up email
+        status:
+          type: string
+          example: pending
+        due_date:
+          type: string
+          format: date-time
+          example: "2026-07-15T10:00:00.000Z"
+        contact_id:
+          type: string
+          format: uuid
+          nullable: true
+          example: c3b3b4f6-8c44-4861-a83a-d34e9e04812a
+        deal_id:
+          type: string
+          format: uuid
+          nullable: true
+          example: d8a24e9f-7a42-4fdb-b1b0-2b1f8e2df8d1
+        created_by:
+          type: string
+          format: uuid
+          example: d7a14e9f-7a42-4fdb-b1b0-2b1f8e2df8d1
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-07-10T12:00:00.000Z"
