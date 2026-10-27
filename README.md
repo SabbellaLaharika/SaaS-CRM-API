@@ -391,3 +391,24 @@ The complete OpenAPI 3.0 specification is available interactively when the serve
 | **Tasks** | `PUT` | `/api/tasks/:id` | Update task | Owner, Admin, Member |
 | **Tasks** | `DELETE` | `/api/tasks/:id` | Delete task | Owner, Admin, Member |
 | **Dashboard** | `GET` | `/api/dashboard` | Get aggregate CRM statistics for tenant | Any role |
+
+---
+
+## 🚀 Future Scope & Planned Improvements
+
+The current implementation is production-ready for core multi-tenant CRM operations. The following enhancements are planned for future iterations:
+
+### 1. PostgreSQL Row-Level Security (RLS)
+Add database-engine-level tenant enforcement using PostgreSQL RLS policies. This would act as a second layer of defense — even if application-level scoping were bypassed, the database engine itself would block cross-tenant access.
+
+### 2. Email-Based Invitation Flow
+Replace the current temporary password system with a proper email invitation workflow. Invited users would receive a secure, expiring token link to set their own password before first login, following industry-standard onboarding practices.
+
+### 3. Cursor-Based Pagination & Filtering
+Implement cursor-based pagination on all list endpoints (`/contacts`, `/deals`, `/tasks`) with support for field-level filtering and sorting. This prevents performance degradation as tenant datasets grow to thousands of records.
+
+### 4. Redis Distributed Caching & Rate Limiting
+Integrate Redis to cache frequently accessed dashboard aggregations and enforce per-tenant API rate limits. This prevents any single tenant from monopolizing shared compute resources under high load.
+
+### 5. Audit Log Trail
+Record all write operations (create, update, delete) to an immutable `audit_logs` table with actor, timestamp, action type, and before/after state. This supports compliance requirements (GDPR, SOC 2) for enterprise customers.
