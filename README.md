@@ -13,7 +13,7 @@ An enterprise-grade Customer Relationship Management (CRM) REST API built to pow
 
 ## 🎥 Project Demo
 
-[![Multi-Tenant SaaS CRM API Demo](https://img.youtube.com/vi/y6aA_58iUeQ/maxresdefault.jpg)](https://youtu.be/y6aA_58iUeQ)
+[![Watch the Multi-Tenant SaaS CRM API Demo on YouTube](https://img.youtube.com/vi/y6aA_58iUeQ/maxresdefault.jpg)](https://youtu.be/y6aA_58iUeQ)
 
 ---
 
