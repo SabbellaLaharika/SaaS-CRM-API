@@ -11,6 +11,12 @@ An enterprise-grade Customer Relationship Management (CRM) REST API built to pow
 
 ---
 
+## 🎥 Project Demo
+
+[![Multi-Tenant SaaS CRM API Demo](https://img.youtube.com/vi/y6aA_58iUeQ/maxresdefault.jpg)](https://youtu.be/y6aA_58iUeQ)
+
+---
+
 ## 🌍 Real-World Use Cases
 
 In modern cloud computing, multi-tenancy is the foundation of high-margin SaaS applications. Instead of deploying separate server and database instances for every client—which dramatically inflates cloud infrastructure costs—this architecture allows thousands of corporate tenants to securely coexist on a unified backend.
